@@ -2,7 +2,8 @@ let dotenv = require("dotenv").config();
 let keys = require("./keys.js");
 let axios = require("axios");
 let moment = require("moment");
-// let spotify = new Spotify(keys.spotify);
+let Spotify = require("node-spotify-api");
+let spotify = new Spotify(keys.spotify);
 
 let inquirer = require("inquirer");
 inquirer.prompt([
@@ -41,11 +42,10 @@ function inq1() {
         message: "What artist do you want to search for?"
     }]).then(function (user) {
 
-
         axios.get("https://rest.bandsintown.com/artists/" + user.artist + "/events?app_id=codingbootcamp").then(
                 function (response) {
-                    response.data.forEach(function(element){
-                        console.log(element.venue.name + " in "+element.venue.city+", "+element.venue.region+" "+element.venue.country + " on " + moment(element.venue.datetime).format("MM/DD/YYYY"));
+                    response.data.forEach(function (element) {
+                        console.log(element.venue.name + " in " + element.venue.city + ", " + element.venue.region + " " + element.venue.country + " on " + moment(element.venue.datetime).format("MM/DD/YYYY"));
                     })
                 })
             .catch(function (error) {
@@ -78,7 +78,24 @@ function inq2() {
         name: "song",
         message: "What song do you want to search for?"
     }]).then(function (user) {
+        var tempSong = "The Sign";
+        if(user.song){
+            tempSong = user.song;
+        }
+        spotify.search({
+            type: 'track',
+            query: tempSong
+        }, function (err, data) {
+            if (err) {
+                return console.log('Error occurred: ' + err);
+            }
 
+            console.log(`Artist: ${data.tracks.items[0].artists[0].name}
+            Song: ${data.tracks.items[0].name}
+
+            
+            `);
+        });
     })
 }
 
@@ -90,24 +107,16 @@ function inq3() {
     }]).then(function (user) {
         var movieArr = [];
         movieArr = user.movie.split(" ");
-        console.log(movieArr);
 
         var urlString = "http://www.omdbapi.com/?t=";
         for (var i = 0; i < movieArr.length; i++) {
             urlString = urlString + movieArr[i] + "+";
-            console.log(urlString);
         }
-        // movieArr.forEach(function(element){
-        //     urlString = urlString+element+"+";
-        //     console.log(urlString);
-        // })
         urlString = urlString.substring(0, urlString.length - 1);
-        console.log(urlString);
         urlString = urlString + "&y=&plot=short&apikey=trilogy";
-        console.log(urlString);
-        axios.get("http://www.omdbapi.com/?t=remember+the+titans&y=&plot=short&apikey=trilogy").then(
+        axios.get(urlString).then(
                 function (response) {
-                    console.log("The movie's rating is: " + JSON.stringify(response));
+                    console.log(response.data.Title);
                 })
             .catch(function (error) {
                 if (error.response) {
