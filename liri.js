@@ -4,10 +4,10 @@ let axios = require("axios");
 let moment = require("moment");
 let Spotify = require("node-spotify-api");
 let spotify = new Spotify(keys.spotify);
+let fs = require("fs");
 
 let inquirer = require("inquirer");
 inquirer.prompt([
-
     {
         type: "list",
         name: "userChoice",
@@ -41,11 +41,119 @@ function inq1() {
         name: "artist",
         message: "What artist do you want to search for?"
     }]).then(function (user) {
+        bandsSearch(user.artist);
+    })
+}
 
-        axios.get("https://rest.bandsintown.com/artists/" + user.artist + "/events?app_id=codingbootcamp").then(
+function inq2() {
+    inquirer.prompt([{
+        type: "input",
+        name: "song",
+        message: "What song do you want to search for?"
+    }]).then(function (user) {
+        var tempSong = "The Sign";
+        if(user.song){
+            tempSong = user.song;
+        }
+        spotifySearch(tempSong);
+})
+}
+
+function inq3() {
+    inquirer.prompt([{
+        type: "input",
+        name: "movie",
+        message: "What movie do you want to search for?"
+    }]).then(function (user) {
+        var movieArr = [];
+        movieArr = user.movie.split(" ");
+
+        var urlString = "http://www.omdbapi.com/?t=";
+        for (var i = 0; i < movieArr.length; i++) {
+            urlString = urlString + movieArr[i] + "+";
+        }
+        urlString = urlString.substring(0, urlString.length - 1);
+        urlString = urlString + "&y=&plot=short&apikey=trilogy";
+        omdbSearch(urlString);
+    })
+}
+
+function inq4() {
+    fs.readFile("./random.txt", "utf8", function(error, data){
+        if(error){
+            console.log("ERROR");
+        }
+        var dwisArr = data.split(",");
+        switch(dwisArr[0]){
+            case "spotify-this-song":
+                spotifySearch(dwisArr[1]);
+                break;
+            case "concert-this":
+                bandsSearch(dwisArr[1]);
+                break;
+            case "movie-this":
+                omdbSearch(dwisArr[1]);
+                break;
+        }
+    })
+}
+
+function spotifySearch(trackName){
+    spotify.search({
+        type: 'track',
+        query: trackName
+    }, function (err, data) {
+        if (err) {
+            return console.log('Error occurred: ' + err);
+        }
+
+        console.log(`Artist: ${data.tracks.items[0].artists[0].name}
+Song: ${data.tracks.items[0].name}
+Preview: ${data.tracks.items[0].preview_url}
+Album: ${data.tracks.items[0].album.name}
+      `);
+    });
+}
+
+function omdbSearch(movieName){
+    axios.get(movieName).then(
+        function (response) {
+            console.log(`Title: ${response.data.Title}
+Release Year: ${response.data.year}
+IMDB Rating: ${response.data.Ratings[0].Value}
+Rotten Tomatoes Rating: ${response.data.Ratings[1].Value}
+Country of Release: ${response.data.Country}
+Native Language: ${response.data.Language}
+Plot Summary: ${response.data.Plot}
+Actors: ${response.data.Actors}`);
+        })
+    .catch(function (error) {
+        if (error.response) {
+            // The request was made and the server responded with a status code
+            // that falls out of the range of 2xx
+            console.log("---------------Data---------------");
+            console.log(error.response.data);
+            console.log("---------------Status---------------");
+            console.log(error.response.status);
+            console.log("---------------Status---------------");
+            console.log(error.response.headers);
+        } else if (error.request) {
+            // The request was made but no response was received
+            // `error.request` is an object that comes back with details pertaining to the error that occurred.
+            console.log(error.request);
+        } else {
+            // Something happened in setting up the request that triggered an Error
+            console.log("Error", error.message);
+        }
+        console.log(error.config);
+    });
+}
+
+function bandsSearch(bandName){
+    axios.get("https://rest.bandsintown.com/artists/" + bandName + "/events?app_id=codingbootcamp").then(
                 function (response) {
                     response.data.forEach(function (element) {
-                        console.log(element.venue.name + " in " + element.venue.city + ", " + element.venue.region + " " + element.venue.country + " on " + moment(element.venue.datetime).format("MM/DD/YYYY"));
+                        console.log(element.lineup + " in " + element.venue.city + ", " + element.venue.region + " " + element.venue.country + " on " + moment(element.datetime).format("MM/DD/YYYY"));
                     })
                 })
             .catch(function (error) {
@@ -68,85 +176,4 @@ function inq1() {
                 }
                 console.log(error.config);
             });
-
-    })
-}
-
-function inq2() {
-    inquirer.prompt([{
-        type: "input",
-        name: "song",
-        message: "What song do you want to search for?"
-    }]).then(function (user) {
-        var tempSong = "The Sign";
-        if(user.song){
-            tempSong = user.song;
-        }
-        spotify.search({
-            type: 'track',
-            query: tempSong
-        }, function (err, data) {
-            if (err) {
-                return console.log('Error occurred: ' + err);
-            }
-
-            console.log(`Artist: ${data.tracks.items[0].artists[0].name}
-            Song: ${data.tracks.items[0].name}
-
-            
-            `);
-        });
-    })
-}
-
-function inq3() {
-    inquirer.prompt([{
-        type: "input",
-        name: "movie",
-        message: "What movie do you want to search for?"
-    }]).then(function (user) {
-        var movieArr = [];
-        movieArr = user.movie.split(" ");
-
-        var urlString = "http://www.omdbapi.com/?t=";
-        for (var i = 0; i < movieArr.length; i++) {
-            urlString = urlString + movieArr[i] + "+";
-        }
-        urlString = urlString.substring(0, urlString.length - 1);
-        urlString = urlString + "&y=&plot=short&apikey=trilogy";
-        axios.get(urlString).then(
-                function (response) {
-                    console.log(response.data.Title);
-                })
-            .catch(function (error) {
-                if (error.response) {
-                    // The request was made and the server responded with a status code
-                    // that falls out of the range of 2xx
-                    console.log("---------------Data---------------");
-                    console.log(error.response.data);
-                    console.log("---------------Status---------------");
-                    console.log(error.response.status);
-                    console.log("---------------Status---------------");
-                    console.log(error.response.headers);
-                } else if (error.request) {
-                    // The request was made but no response was received
-                    // `error.request` is an object that comes back with details pertaining to the error that occurred.
-                    console.log(error.request);
-                } else {
-                    // Something happened in setting up the request that triggered an Error
-                    console.log("Error", error.message);
-                }
-                console.log(error.config);
-            });
-    })
-}
-
-function inq4() {
-    inquirer.prompt([{
-        type: "input",
-        name: "song",
-        message: "What song to search for?"
-    }]).then(function (user) {
-
-    })
 }
